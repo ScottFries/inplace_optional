@@ -103,3 +103,53 @@ public:
     T& emplace(std::initializer_list<U> ilist, Args&&... args);*/
 };
 }  // namespace inplace_optional
+
+// TODO: Should you have the numeric_limits specializations? Test the bitshift logic.
+#define DEFINE_TYPE(name, bit_count)                                                                   \
+    namespace inplace_optional                                                                         \
+    {                                                                                                  \
+    class name : public _inplace_base<name, std::##name>                                               \
+    {                                                                                                  \
+        using value_type = std::##name;                                                                \
+                                                                                                       \
+        using _inplace_base<name, std::##name>::_inplace_base;                                         \
+                                                                                                       \
+    private:                                                                                           \
+        value_type value_ : bit_count;                                                                 \
+        bool set_ : 1 = false;                                                                         \
+                                                                                                       \
+        friend class _inplace_base;                                                                    \
+    };                                                                                                 \
+    }                                                                                                  \
+                                                                                                       \
+    namespace std                                                                                      \
+    {                                                                                                  \
+    template <>                                                                                        \
+    class numeric_limits<inplace_optional::##name> : public numeric_limits<std::##name>                \
+    {                                                                                                  \
+        static constexpr T min() noexcept override                                                     \
+        {                                                                                              \
+            T base_min = numeric_limits<std::##name>::min();                                           \
+            return numeric_limits<std::##name>::is_signed() ? base_min >> 1 : base_min;                \
+        }                                                                                              \
+                                                                                                       \
+        static constexpr T lowest() noexcept override                                                  \
+        {                                                                                              \
+            T base_lowest = numeric_limits<std::##name>::lowest();                                     \
+            return numeric_limits<std::##name>::is_signed() ? base_lowest >> 1 : base_lowest;          \
+        }                                                                                              \
+                                                                                                       \
+        static constexpr T max() noexcept override { return numeric_limits<std::##name>::max() >> 1; } \
+    };                                                                                                 \
+    }
+
+DEFINE_TYPE(int8_t, 7);
+DEFINE_TYPE(int16_t, 15);
+DEFINE_TYPE(int32_t, 31);
+DEFINE_TYPE(int64_t, 63);
+DEFINE_TYPE(uint8_t, 7);
+DEFINE_TYPE(uint16_t, 15);
+DEFINE_TYPE(uint32_t, 31);
+DEFINE_TYPE(uint64_t, 63);
+
+#undef DEFINE_TYPE
